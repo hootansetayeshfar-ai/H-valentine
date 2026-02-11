@@ -12,28 +12,17 @@
       --card: rgba(255,255,255,.08);
       --border: rgba(255,255,255,.14);
       --text: rgba(255,255,255,.92);
-      --muted: rgba(255,255,255,.70);
-      --yes:#47d18c;
-      --no:#ff5a6a;
     }
 
-    *{
-      box-sizing:border-box;
-      font-family: system-ui, -apple-system, Vazirmatn, Tahoma, Arial;
-    }
+    *{ box-sizing:border-box; font-family: system-ui, -apple-system, Vazirmatn, Tahoma, Arial; }
 
     body{
-      margin:0;
-      min-height:100vh;
-      display:grid;
-      place-items:center;
-
+      margin:0; min-height:100vh; display:grid; place-items:center;
       background:
         radial-gradient(900px 500px at 20% 20%, rgba(255,90,106,.18), transparent 60%),
         radial-gradient(900px 600px at 80% 10%, rgba(71,209,140,.18), transparent 60%),
         radial-gradient(900px 700px at 50% 120%, rgba(120,80,255,.20), transparent 60%),
         linear-gradient(180deg, var(--bg1), var(--bg2));
-
       color: var(--text);
       padding: 18px;
       overflow:hidden;
@@ -42,19 +31,15 @@
     .card{
       width:min(720px, 100%);
       background: var(--card);
-      border: 1px solid var(--border);
+      border: 1px solid rgba(255,255,255,.14);
       border-radius: 20px;
       padding: 26px 22px;
       box-shadow: 0 20px 60px rgba(0,0,0,.35);
-      position: relative;
       text-align:center;
       backdrop-filter: blur(10px);
     }
 
-    h1{
-      margin: 6px 0 10px;
-      font-size: clamp(20px, 4vw, 32px);
-    }
+    h1{ margin: 6px 0 10px; font-size: clamp(20px, 4vw, 32px); }
 
     .stage{
       position: relative;
@@ -70,6 +55,7 @@
     }
 
     .btn{
+      position:absolute;
       border: 0;
       padding: 12px 22px;
       border-radius: 999px;
@@ -77,16 +63,13 @@
       font-size:16px;
       cursor: pointer;
       transition: transform .12s ease, filter .12s ease;
-      position:absolute;
     }
-
     .btn:active{ transform: scale(.98); }
 
     .yes{
       background: linear-gradient(135deg, rgba(71,209,140,1), rgba(71,209,140,.7));
       color:#062014;
     }
-
     .no{
       background: linear-gradient(135deg, rgba(255,90,106,1), rgba(255,90,106,.75));
       color:#2b0006;
@@ -101,44 +84,30 @@
       pointer-events:none;
       transition: opacity .25s ease;
     }
-
-    .result.show{
-      opacity:1;
-      pointer-events:auto;
-    }
+    .result.show{ opacity:1; pointer-events:auto; }
 
     .heart{
       font-size:80px;
       animation: pop .6s ease forwards, float 1.8s ease-in-out infinite .6s;
     }
+    @keyframes pop{ 0%{ transform: scale(.6); opacity:0; } 100%{ transform: scale(1); opacity:1; } }
+    @keyframes float{ 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(-10px); } }
 
-    @keyframes pop{
-      0%{ transform: scale(.6); opacity:0; }
-      100%{ transform: scale(1); opacity:1; }
-    }
-
-    @keyframes float{
-      0%,100%{ transform: translateY(0); }
-      50%{ transform: translateY(-10px); }
-    }
-
-    /* Meme overlay (base64 image) */
+    /* Meme overlay */
     .meme{
       position:absolute;
       inset:0;
       display:none;
-      place-items:center;
-      background: rgba(0,0,0,.35);
+      background: rgba(0,0,0,.45);
+      z-index: 50;
       cursor:pointer;
-      z-index: 10;
     }
-    .meme.show{ display:grid; }
+    .meme.show{ display:block; }
     .meme img{
       width:100%;
       height:100%;
-      object-fit: cover;
-      border-radius: 12px;
-      transform: scale(1.02);
+      object-fit:cover;
+      display:block;
     }
   </style>
 </head>
@@ -152,7 +121,6 @@
     </h1>
 
     <div class="stage" id="stage">
-
       <button class="btn yes" id="yesBtn" style="left:35%; top:60%;">بله</button>
       <button class="btn no"  id="noBtn"  style="left:65%; top:60%;">نه</button>
 
@@ -163,7 +131,6 @@
         </div>
       </div>
 
-      <!-- After 3x "No" -->
       <div class="meme" id="meme" title="کلیک کن تا برگرده">
         <img id="memeImg" alt="meme" />
       </div>
@@ -178,8 +145,10 @@
   const meme   = document.getElementById("meme");
   const memeImg= document.getElementById("memeImg");
 
-  // Base64 meme (self-contained)
-  const MEME_DATA_URI = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgOTAwIDYwMCI+CiAgPHJlY3Qgd2lkdGg9IjkwMCIgaGVpZ2h0PSI2MDAiIGZpbGw9IiNlN2RlZDIiLz4KICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg1NjAsNDEwKSI+CiAgICA8cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjEyMCIgcng9IjIwIiBmaWxsPSIjMWYyMzI2IiBvcGFjaXR5PSIuOTIiLz4KICAgIDx0ZXh0IHg9IjE1MCIgeT0iNzgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iNTQiIGZvbnQtZmFtaWx5PSJWYXppcm1hdG4sIFRhaG9tYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZpbGw9IiNmZmYiIGRpcmVjdGlvbj0icnRsIiB1bmljb2RlLWJpZGk9InBsYWludGV4dCI+2KLYr9mFINio2KfYsdqHLzwvdGV4dD4KICA8L2c+Cjwvc3ZnPg==";
+  // Base64 meme (self-contained) — اگر خواستی بعداً عکس خودت رو جایگزین کن
+  const MEME_DATA_URI =
+    "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjY4MCIgdmlld0JveD0iMCAwIDEyMDAgNjgwIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZyIgeDE9IjAiIHkxPSIwIiB4Mj0iMSIgeTI9IjEiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNlOGQ5ZDAiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZDJjNGI1Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyMDAiIGhlaWdodD0iNjgwIiBmaWxsPSJ1cmwoI2cpIi8+CiAgPGcgZmlsbD0iIzE0MTgxYSIgb3BhY2l0eT0iMC44NSI+CiAgICA8cmVjdCB4PSI3NDAiIHk9IjQ1MCIgd2lkdGg9IjQwMCIgaGVpZ2h0PSIxNjAiIHJ4PSIyNCIvPgogICA8L2c+CiAgPHRleHQgeD0iOTQwIiB5PSI1NTUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iNzIiIGZvbnQtZmFtaWx5PSJWYXppcm1hdG4sIFRhaG9tYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZpbGw9IiNmZmYiIGRpcmVjdGlvbj0icnRsIiB1bmljb2RlLWJpZGk9InBsYWludGV4dCI+2KLYr9mFINio2KfYsdqHPC90ZXh0PgogIDx0ZXh0IHg9IjYwMCIgeT0iMjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjU0IiBmb250LWZhbWlseT0iVmF6aXJtYXRuLCBUYWhvbWEsIEFyaWFsLCBzYW5zLXNlcmlmIiBmaWxsPSIjMjAyNDI2IiBkaXJlY3Rpb249InJ0bCIgdW5pY29kZS1iaWRpPSJwbGFpbnRleHQiPtmI2KfYsdmB2KfYryDYp9mE2KzYp9mGPC90ZXh0Pgo8L3N2Zz4=";
+
   memeImg.src = MEME_DATA_URI;
 
   const initialYes = { left: yesBtn.style.left, top: yesBtn.style.top };
@@ -187,6 +156,10 @@
 
   let noCount = 0;
   let yesScale = 1;
+
+  // جلوگیری از چند بار شمردن پشت سر هم به خاطر لرزش موس
+  let lastCountAt = 0;
+  const COOLDOWN_MS = 250;
 
   function moveNo(){
     const stageRect = stage.getBoundingClientRect();
@@ -197,6 +170,21 @@
 
     noBtn.style.left = x + "px";
     noBtn.style.top  = y + "px";
+  }
+
+  function countNoOnce(){
+    const now = Date.now();
+    if (now - lastCountAt < COOLDOWN_MS) return;
+    lastCountAt = now;
+
+    noCount++;
+
+    yesScale += 0.10;
+    yesBtn.style.transform = `scale(${yesScale})`;
+
+    if(noCount >= 3){
+      showMeme();
+    }
   }
 
   function showMeme(){
@@ -224,46 +212,40 @@
     noBtn.style.top   = initialNo.top;
   }
 
-  // prevent stage click from instantly resetting after third "No"
-  function stopBubbling(e){ e.stopPropagation(); }
-
+  // دکمه نه: هر بار فرار => +1
   noBtn.addEventListener("mouseenter", () => {
-    if(!meme.classList.contains("show")) moveNo();
+    if (meme.classList.contains("show")) return;
+    countNoOnce();
+    moveNo();
   });
 
-  noBtn.addEventListener("touchstart", (e) => {
-    if(!meme.classList.contains("show")) moveNo();
+  noBtn.addEventListener("touchstart", () => {
+    if (meme.classList.contains("show")) return;
+    countNoOnce();
+    moveNo();
   }, {passive:true});
 
+  // اگر هم موفق شد کلیک کنه، باز هم بشمر
   noBtn.addEventListener("click", (e)=>{
     e.preventDefault();
-    stopBubbling(e);
+    e.stopPropagation();
     if (meme.classList.contains("show")) return;
-
-    noCount++;
+    countNoOnce();
     moveNo();
-
-    yesScale += 0.10;
-    yesBtn.style.transform = `scale(${yesScale})`;
-
-    if(noCount >= 3){
-      showMeme();
-    }
   });
 
   yesBtn.addEventListener("click", (e)=>{
-    stopBubbling(e);
+    e.stopPropagation();
     if (meme.classList.contains("show")) return;
     result.classList.add("show");
   });
 
-  // Click anywhere (on meme overlay OR on empty stage) when meme is shown => reset
-  meme.addEventListener("click", resetAll);
+  // وقتی عکس اومد: کلیک روی عکس یا هرجای استیج => ریست
+  meme.addEventListener("click", (e)=>{ e.stopPropagation(); resetAll(); });
   stage.addEventListener("click", ()=>{
     if (meme.classList.contains("show")) resetAll();
   });
 </script>
-    
 
 </body>
 </html>

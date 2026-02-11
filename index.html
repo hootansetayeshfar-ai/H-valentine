@@ -65,6 +65,8 @@
       border: 1px dashed rgba(255,255,255,.16);
       background: rgba(0,0,0,.14);
       overflow: hidden;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .btn{
@@ -75,6 +77,7 @@
       font-size:16px;
       cursor: pointer;
       transition: transform .12s ease, filter .12s ease;
+      position:absolute;
     }
 
     .btn:active{ transform: scale(.98); }
@@ -85,7 +88,6 @@
     }
 
     .no{
-      position:absolute;
       background: linear-gradient(135deg, rgba(255,90,106,1), rgba(255,90,106,.75));
       color:#2b0006;
     }
@@ -120,6 +122,24 @@
       50%{ transform: translateY(-10px); }
     }
 
+    /* Meme overlay (base64 image) */
+    .meme{
+      position:absolute;
+      inset:0;
+      display:none;
+      place-items:center;
+      background: rgba(0,0,0,.35);
+      cursor:pointer;
+      z-index: 10;
+    }
+    .meme.show{ display:grid; }
+    .meme img{
+      width:100%;
+      height:100%;
+      object-fit: cover;
+      border-radius: 12px;
+      transform: scale(1.02);
+    }
   </style>
 </head>
 
@@ -133,15 +153,8 @@
 
     <div class="stage" id="stage">
 
-      <button class="btn yes" id="yesBtn"
-        style="position:absolute; left:35%; top:60%;">
-        بله
-      </button>
-
-      <button class="btn no" id="noBtn"
-        style="left:65%; top:60%;">
-        نه
-      </button>
+      <button class="btn yes" id="yesBtn" style="left:35%; top:60%;">بله</button>
+      <button class="btn no"  id="noBtn"  style="left:65%; top:60%;">نه</button>
 
       <div class="result" id="result">
         <div>
@@ -150,33 +163,103 @@
         </div>
       </div>
 
+      <!-- After 3x "No" -->
+      <div class="meme" id="meme" title="کلیک کن تا برگرده">
+        <img id="memeImg" alt="meme" />
+      </div>
     </div>
   </div>
 
 <script>
-const stage = document.getElementById("stage");
-const noBtn = document.getElementById("noBtn");
-const yesBtn = document.getElementById("yesBtn");
-const result = document.getElementById("result");
+  const stage  = document.getElementById("stage");
+  const noBtn  = document.getElementById("noBtn");
+  const yesBtn = document.getElementById("yesBtn");
+  const result = document.getElementById("result");
+  const meme   = document.getElementById("meme");
+  const memeImg= document.getElementById("memeImg");
 
-function moveNo(){
-  const rect = stage.getBoundingClientRect();
-  const x = Math.random() * (rect.width - 100);
-  const y = Math.random() * (rect.height - 50);
+  // === Embedded base64 SVG meme (self-contained) ===
+  const MEME_DATA_URI = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgOTAwIDYwMCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2U3ZGVkMiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNkN2M5YmIiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8ZmlsdGVyIGlkPSJzaGFkb3ciIHg9Ii0yMCUiIHk9Ii0yMCUiIHdpZHRoPSIxNDAlIiBoZWlnaHQ9IjE0MCUiPgogICAgICA8ZmVEcm9wU2hhZG93IGR4PSIwIiBkeT0iMTAiIHN0ZERldmlhdGlvbj0iMTIiIGZsb29kLWNvbG9yPSIjMDAwIiBmbG9vZC1vcGFjaXR5PSIuMjUiLz4KICAgIDwvZmlsdGVyPgogIDwvZGVmcz4KCiAgPHJlY3Qgd2lkdGg9IjkwMCIgaGVpZ2h0PSI2MDAiIGZpbGw9InVybCgjYmcpIi8+CgogIDwhLS0gQ2F0IGhlYWQgLS0+CiAgPGcgZmlsdGVyPSJ1cmwoI3NoYWRvdykiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAsMTApIj4KICAgIDwhLS0gZWFycyAtLT4KICAgIDxwYXRoIGQ9Ik0yNTAgMjEwIEwzNDAgNzAgTDQxMCAyMzUgWiIgZmlsbD0iIzhlOGE4NiIvPgogICAgPHBhdGggZD0iTTY1MCAyMTAgTDU2MCA3MCBMNDkwIDIzNSBaIiBmaWxsPSIjOGU4YTg2Ii8+CiAgICA8cGF0aCBkPSJNMjkwIDIwNSBMMzQyIDEwNSBMMzg1IDIyNSBaIiBmaWxsPSIjYjdiMWFhIiBvcGFjaXR5PSIuODUiLz4KICAgIDxwYXRoIGQ9Ik02MTAgMjA1IEw1NTggMTA1IEw1MTUgMjI1IFoiIGZpbGw9IiNiN2IxYWEiIG9wYWNpdHk9Ii44NSIvPgoKICAgIDwhLS0gZmFjZSAtLT4KICAgIDxlbGxpcHNlIGN4PSI0NTAiIGN5PSIzMjAiIHJ4PSIyNjAiIHJ5PSIyMTAiIGZpbGw9IiM5YTk1OTEiLz4KICAgIDxlbGxpcHNlIGN4PSI0NTAiIGN5PSIzNjAiIHJ4PSIyMzAiIHJ5PSIxNzAiIGZpbGw9IiNiN2IxYWEiIG9wYWNpdHk9Ii45Ii8+CgogICAgPCEtLSBzdHJpcGVzIC0tPgogICAgPHBhdGggZD0iTTQ1MCAxODAgQzQyMCAyMjAgNDIwIDI1MCA0NTAgMjkwIEM0ODAgMjUwIDQ4MCAyMjAgNDUwIDE4MCBaIiBmaWxsPSIjN2Y3YTc2IiBvcGFjaXR5PSIuNzUiLz4KICAgIDxwYXRoIGQ9Ik00MTAgMTk1IEMzODAgMjM1IDM5MCAyNjUgNDE1IDI5MCIgc3Ryb2tlPSIjN2Y3YTc2IiBzdHJva2Utd2lkdGg9IjE4IiBzdHJva2UtbGluZWNhcD0icm91bmQiIGZpbGw9Im5vbmUiIG9wYWNpdHk9Ii42NSIvPgogICAgPHBhdGggZD0iTTQ5MCAxOTUgQzUyMCAyMzUgNTEwIDI2NSA0ODUgMjkwIiBzdHJva2U9IiM3ZjdhNzYiIHN0cm9rZS13aWR0aD0iMTgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgZmlsbD0ibm9uZSIgb3BhY2l0eT0iLjY1Ii8+CgogICAgPCEtLSBleWVzIChncnVtcHkpIC0tPgogICAgPHBhdGggZD0iTTI5MCAzMDUgQzM1MCAyNjUgNDIwIDI2NSA0NzAgMzAwIiBzdHJva2U9IiM1MTRjNDkiIHN0cm9rZS13aWR0aD0iMjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgZmlsbD0ibm9uZSIvPgogICAgPHBhdGggZD0iTTYxMCAzMDUgQzU1MCAyNjUgNDgwIDI2NSA0MzAgMzAwIiBzdHJva2U9IiM1MTRjNDkiIHN0cm9rZS13aWR0aD0iMjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgZmlsbD0ibm9uZSIvPgoKICAgIDxlbGxpcHNlIGN4PSIzNzAiIGN5PSIzMzUiIHJ4PSIzOCIgc3k9IjI4IiBmaWxsPSIjMWIxYTE5Ii8+CiAgICA8ZWxsaXBzZSBjeD0iNTMwIiBjeT0iMzM1IiByeD0iMzgiIHJ5PSIyOCIgc3R5bGU9ImZpbGw6IzFiMWExOSI+PC9lbGxpcHNlPgogICAgPGNpcmNsZSBjeD0iMzU4IiBjeT0iMzMwIiByPSI3IiBmaWxsPSIjZmZmIiBvcGFjaXR5PSIuOCIvPgogICAgPGNpcmNsZSBjeD0iNTE4IiBjeT0iMzMwIiByPSI3IiBmaWxsPSIjZmZmIiBvcGFjaXR5PSIuOCIvPgoKICAgIDwhLS0gbm9zZSArIG1vdXRoIC0tPgogICAgPHBhdGggZD0iTTQ1MCAzODAgTDQyMCA0MDUgUTQ1MCA0MzAgNDgwIDQwNSBaIiBmaWxsPSIjN2E1YTU1Ii8+CiAgICA8cGF0aCBkPSJNNDUwIDQxMCBDNDUwIDQ0NSA0MjUgNDU1IDQwNSA0NjUiIHN0cm9rZT0iIzUxNGM0OSIgc3Ryb2tlLXdpZHRoPSIxMCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBmaWxsPSJub25lIi8+CiAgICA8cGF0aCBkPSJNNDUwIDQxMCBDNDUwIDQ0NSA0NzUgNDU1IDQ5NSA0NjUiIHN0cm9rZT0iIzUxNGM0OSIgc3Ryb2tlLXdpZHRoPSIxMCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBmaWxsPSJub25lIi8+CgogICAgPCEtLSB3aGlza2VycyAtLT4KICAgIDxwYXRoIGQ9Ik0yMjAgMzk1IEMzMTAgMzgwIDMzMCAzODAgMzgwIDM5MCIgc3Ryb2tlPSIjNmI2NjYyIiBzdHJva2Utd2lkdGg9IjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgZmlsbD0ibm9uZSIgb3BhY2l0eT0iLjc1Ii8+CiAgICA8cGF0aCBkPSJNMjIwIDQzNSBDMzEwIDQyMCAzMzUgNDIwIDM4NSA0MzAiIHN0cm9rZT0iIzZiNjY2MiIgc3Ryb2tlLXdpZHRoPSI4IiBzdHJva2UtbGluZWNhcD0icm91bmQiIGZpbGw9Im5vbmUiIG9wYWNpdHk9Ii43NSIvPgogICAgPHBhdGggZD0iTTY4MCAzOTUgQzU5MCAzODAgNTcwIDM4MCA1MjAgMzkwIiBzdHJva2U9IiM2YjY2NjIiIHN0cm9rZS13aWR0aD0iOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBmaWxsPSJub25lIiBvcGFjaXR5PSIuNzUiLz4KICAgIDxwYXRoIGQ9Ik02ODAgNDM1IEM1OTAgNDIwIDU2NSA0MjAgNTE1IDQzMCIgc3Ryb2tlPSIjNmI2NjYyIiBzdHJva2Utd2lkdGg9IjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgZmlsbD0ibm9uZSIgb3BhY2l0eT0iLjc1Ii8+CiAgPC9nPgoKICA8IS0tIENhcHRpb24gYm94IC0tPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDU2MCw0MTApIiBmaWx0ZXI9InVybCgjc2hhZG93KSI+CiAgICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMzAwIiBoZWlnaHQ9IjEyMCIgcng9IjIwIiBmaWxsPSIjMWYyMzI2IiBvcGFjaXR5PSIuOTIiLz4KICAgIDx0ZXh0IHg9IjE1MCIgeT0iNzgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iNTQiIGZvbnQtZmFtaWx5PSJWYXppcm1hdG4sIFRhaG9tYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZpbGw9IiNmZmZmZmYiIGRpcmVjdGlvbj0icnRsIiB1bmljb2RlLWJpZGk9InBsYWludGV4dCI+2KLYr9mFINio2KfYsdqHLzwvdGV4dD4KICA8L2c+Cjwvc3ZnPg==";
 
-  noBtn.style.left = x + "px";
-  noBtn.style.top  = y + "px";
-}
+  memeImg.src = MEME_DATA_URI;
 
-noBtn.addEventListener("mouseenter", moveNo);
-noBtn.addEventListener("click", e=>{
-  e.preventDefault();
-  moveNo();
-});
+  // Store initial button positions for reset
+  const initialYes = { left: yesBtn.style.left, top: yesBtn.style.top };
+  const initialNo  = { left: noBtn.style.left,  top: noBtn.style.top  };
 
-yesBtn.addEventListener("click", ()=>{
-  result.classList.add("show");
-});
+  let noCount = 0;
+  let yesScale = 1;
+
+  function moveNo(){
+    const stageRect = stage.getBoundingClientRect();
+    const btnRect   = noBtn.getBoundingClientRect();
+
+    const x = Math.random() * (stageRect.width  - btnRect.width);
+    const y = Math.random() * (stageRect.height - btnRect.height);
+
+    noBtn.style.left = x + "px";
+    noBtn.style.top  = y + "px";
+  }
+
+  function showMeme(){
+    meme.classList.add("show");
+    yesBtn.style.display = "none";
+    noBtn.style.display  = "none";
+    result.classList.remove("show");
+  }
+
+  function resetAll(){
+    meme.classList.remove("show");
+    result.classList.remove("show");
+
+    yesBtn.style.display = "block";
+    noBtn.style.display  = "block";
+
+    // reset counters + transforms
+    noCount = 0;
+    yesScale = 1;
+    yesBtn.style.transform = "scale(1)";
+
+    // reset positions
+    yesBtn.style.left = initialYes.left;
+    yesBtn.style.top  = initialYes.top;
+
+    noBtn.style.left  = initialNo.left;
+    noBtn.style.top   = initialNo.top;
+  }
+
+  // No button: avoid "mouseenter" on mobile -> add touchstart too
+  noBtn.addEventListener("mouseenter", () => { if(!meme.classList.contains("show")) moveNo(); });
+  noBtn.addEventListener("touchstart", (e) => { if(!meme.classList.contains("show")) moveNo(); }, {passive:true});
+
+  noBtn.addEventListener("click", (e)=>{
+    e.preventDefault();
+    if (meme.classList.contains("show")) return;
+
+    noCount++;
+
+    // move the No button away
+    moveNo();
+
+    // make YES slightly bigger each time
+    yesScale += 0.10;
+    yesBtn.style.transform = `scale(${yesScale})`;
+
+    if(noCount >= 3){
+      showMeme();
+    }
+  });
+
+  yesBtn.addEventListener("click", ()=>{
+    if (meme.classList.contains("show")) return;
+    result.classList.add("show");
+  });
+
+  // Click on meme or anywhere in stage while meme is shown => reset
+  meme.addEventListener("click", resetAll);
+  stage.addEventListener("click", (e)=>{
+    if (meme.classList.contains("show")) resetAll();
+  });
 </script>
 
 </body>
